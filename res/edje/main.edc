@@ -1,0 +1,143 @@
+/*
+ * Samsung API
+ * Copyright (c) 2009-2015 Samsung Electronics Co., Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the License);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/license/
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an AS IS BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+
+#define CLOCK_SIZE 135
+
+#define SIN0 0.000
+#define SIN30 0.500
+#define SIN60 0.866
+#define SIN90 1.000
+
+#define COS0 1.000
+#define COS30 0.866
+#define COS60 0.500
+#define COS90 0.000
+
+#define NUM1_X (CLOCK_SIZE*SIN30)
+#define NUM1_Y (-CLOCK_SIZE*COS30)
+#define NUM2_X (CLOCK_SIZE*SIN60)
+#define NUM2_Y (-CLOCK_SIZE*COS60)
+#define NUM3_X (CLOCK_SIZE*SIN90)
+#define NUM3_Y (-CLOCK_SIZE*COS90)
+
+#define NUM4_X (CLOCK_SIZE*SIN60)
+#define NUM4_Y (CLOCK_SIZE*COS60)
+#define NUM5_X (CLOCK_SIZE*SIN30)
+#define NUM5_Y (CLOCK_SIZE*COS30)
+#define NUM6_X (CLOCK_SIZE*SIN0)
+#define NUM6_Y (CLOCK_SIZE*COS0)
+
+#define NUM7_X (-CLOCK_SIZE*SIN30)
+#define NUM7_Y (CLOCK_SIZE*COS30)
+#define NUM8_X (-CLOCK_SIZE*SIN60)
+#define NUM8_Y (CLOCK_SIZE*COS60)
+#define NUM9_X (-CLOCK_SIZE*SIN90)
+#define NUM9_Y (CLOCK_SIZE*COS90)
+
+#define NUM10_X (-CLOCK_SIZE*SIN60)
+#define NUM10_Y (-CLOCK_SIZE*COS60)
+#define NUM11_X (-CLOCK_SIZE*SIN30)
+#define NUM11_Y (-CLOCK_SIZE*COS30)
+#define NUM12_X (-CLOCK_SIZE*SIN0)
+#define NUM12_Y (-CLOCK_SIZE*COS0)
+
+#define CLOCK_NUMBER(number, off_x1, off_y1, off_x2, off_y2) \
+	part { \
+		name: "num_"number; \
+		type: "TEXT"; \
+		scale: 1; \
+		description { \
+			state: "default" 0.0; \
+			align: 0.5 0.5; \
+			fixed: 1 1; \
+			rel1 { relative: 0.5 0.5; to: "clock"; offset: off_x1 off_y1; } \
+			rel2 { relative: 0.5 0.5; to: "clock"; offset: off_x2 off_y2; } \
+			text { \
+				size: 20; \
+				font: "Sans"; \
+				text: number; \
+				align: 0.5 0.5; \
+				min: 1 1; \
+			} \
+			color: 100 100 100 255; \
+			visible: 1; \
+		} \
+	}
+
+collections {
+	group {
+		name: "main";
+		parts {
+			part {
+				name: "bg";
+				type: RECT;
+				scale: 1;
+				description {
+					state: "default" 0.0;
+					align: 0.0 0.0;
+					rel1 { relative: 0.0 0.0; }
+					rel2 { relative: 1.0 1.0; }
+					visible: 0;
+				}
+			}
+			part {
+				name: "clock_center";
+				type: SPACER;
+				scale: 1;
+				description {
+					state: "default" 0.0;
+					align: 0.5 0.5;
+					rel1 { relative: 0.5 0.5; to: "bg"; }
+					rel2 { relative: 0.5 0.5; to: "bg"; }
+				}
+			}
+			part {
+				name: "clock";
+				type: SWALLOW;
+				scale: 1;
+				description {
+					state: "default" 0.0;
+					align: 0.5 0.5;
+					rel1 { relative: 0.5 0.5; to: "clock_center"; }
+					rel2 { relative: 0.5 0.5; to: "clock_center"; }
+					visible: 1;
+				}
+			}
+			CLOCK_NUMBER(1, NUM1_X, NUM1_Y, NUM1_X, NUM1_Y);
+			CLOCK_NUMBER(2, NUM2_X, NUM2_Y, NUM2_X, NUM2_Y);
+			CLOCK_NUMBER(3, NUM3_X, NUM3_Y, NUM3_X, NUM3_Y);
+			CLOCK_NUMBER(4, NUM4_X, NUM4_Y, NUM4_X, NUM4_Y);
+			CLOCK_NUMBER(5, NUM5_X, NUM5_Y, NUM5_X, NUM5_Y);
+			CLOCK_NUMBER(6, NUM6_X, NUM6_Y, NUM6_X, NUM6_Y);
+			CLOCK_NUMBER(7, NUM7_X, NUM7_Y, NUM7_X, NUM7_Y);
+			CLOCK_NUMBER(8, NUM8_X, NUM8_Y, NUM8_X, NUM8_Y);
+			CLOCK_NUMBER(9, NUM9_X, NUM9_Y, NUM9_X, NUM9_Y);
+			CLOCK_NUMBER(10, NUM10_X, NUM10_Y, NUM10_X, NUM10_Y);
+			CLOCK_NUMBER(11, NUM11_X, NUM11_Y, NUM11_X, NUM11_Y);
+			CLOCK_NUMBER(12, NUM12_X, NUM12_Y, NUM12_X, NUM12_Y);
+#if 0
+			CLOCK_NUMBER(12, 0.5, 0.0, 0.5, 0.0, 0, 20, 0 ,20);
+			CLOCK_NUMBER(3, 1.0, 0.5, 1.0, 0.5, -20, 0, -20, 0);
+			CLOCK_NUMBER(6, 0.5, 1.0, 0.5, 1.0, 0, -20, 0, -20);
+			CLOCK_NUMBER(9, 0.0, 0.5, 0.0, 0.5, 20, 0, 20, 0);
+#endif
+		}
+	}
+}
+/* End of file */
