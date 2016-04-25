@@ -19,30 +19,18 @@
 #include <tizen.h>
 #include <watch_app.h>
 #include <watch_app_efl.h>
-
-#include "log.h"
-#include "stretch_time.h"
-
-#define PI 3.1415926535897
-
-#include <app.h>
 #include <device/haptic.h>
 
-#include <sys/time.h>
-#include <unistd.h>
-#include <stdio.h>
+#include "stretch_time.h"
+#include "sm_popup.h"
+#include "view_defines.h"
+#include "log.h"
 
-#define LAUNCH_AT_EVERY_HOUR 1
+#define MAIN_EDJ "edje/main.edj"
+#define PI 3.1415926535897
 
-void
-app_get_resource(const char *edj_file_in, char *edj_path_out, int edj_path_max)
-{
-	char *res_path = app_get_resource_path();
-	if (res_path) {
-		snprintf(edj_path_out, edj_path_max, "%s%s", res_path, edj_file_in);
-		free(res_path);
-	}
-}
+Evas_Object *view_create_win(const char *pkg_name, void* data);
+static Evas_Object *_create_layout(void* data);
 
 void vibrate(int duration, int feedback)
 {
@@ -64,20 +52,49 @@ static double _get_radian(int num)
 	return num * (PI / 180);
 }
 
-
-
-static Evas_Object *_create_win(appdata_s *ad)
+/*
+ * @brief Create Essential Object window and layout
+ */
+void view_create(void* data)
 {
-	Evas_Object *win = NULL;
-	int ret = 0;
+	appdata_s* ad = data;
 
-	ret = watch_app_get_elm_win(&win);
-	if (ret != APP_ERROR_NONE) {
-		_E("failed to get window. err = %d", ret);
-		return NULL;
+	ad->win = view_create_win(PACKAGE, data);
+	if (!ad->win) {
+		dlog_print(DLOG_ERROR, LOG_TAG, "failed to create a window.");
+		return;
 	}
 
-	elm_win_title_set(win, "analogwatch");
+	ad->layout = _create_layout(data);
+	if (!ad->layout) {
+		dlog_print(DLOG_ERROR, LOG_TAG, "failed to create main layout.");
+		return;
+	}
+
+	evas_object_show(ad->win);
+}
+
+
+/*
+ * @brief Makes a basic window named with package name.
+ * @param[pkg_name]: Name of the window.
+ */
+Evas_Object *view_create_win(const char *pkg_name, void* data)
+{
+	appdata_s* ad = data;
+	Evas_Object *win = NULL;
+	int ret;
+
+	/*
+	 * Window
+	 * Create and initialize elm_win.
+	 * elm_win is mandatory to manipulate window
+	 */
+	ret = watch_app_get_elm_win(&win);
+	if (ret != APP_ERROR_NONE)
+		return NULL;
+
+	elm_win_title_set(win, pkg_name);
 	elm_win_borderless_set(win, EINA_TRUE);
 	elm_win_alpha_set(win, EINA_FALSE);
 	elm_win_indicator_mode_set(win, ELM_WIN_INDICATOR_HIDE);
@@ -86,81 +103,84 @@ static Evas_Object *_create_win(appdata_s *ad)
 	elm_win_role_set(win, "no-effect");
 
 	evas_object_resize(win, ad->w, ad->h);
-	evas_object_show(win);
 
 	return win;
 }
 
-
-
-static Evas_Object *_create_layout(appdata_s *ad)
+/*
+ * @brief Makes and sets a layout to the part
+ * @param[parent]: Object to which you want to set this layout
+ * @param[file_path]: File path of EDJ will be used
+ * @param[group_name]: Group name in EDJ that you want to set to layout
+ * @param[part_name]: Part name to which you want to set this layout
+ */
+Evas_Object *view_create_layout_for_part(Evas_Object *parent, char *file_path, char *group_name, char *part_name)
 {
-	Elm_Object_Item *nf_it = NULL;
 	Evas_Object *layout = NULL;
-	Eina_Bool ret;
 
-	retv_if(!ad, NULL);
-	retv_if(!ad->win, NULL);
+	if (parent == NULL) {
+		dlog_print(DLOG_ERROR, LOG_TAG, "parent is NULL.");
+		return NULL;
+	}
 
-	layout = elm_layout_add(ad->win);
-	retv_if(!layout, NULL);
-
-	ret = elm_layout_file_set(layout, LAYOUTEDJ, "main");
-	if (EINA_FALSE == ret) return NULL;
-
+	layout = elm_layout_add(parent);
+	elm_layout_file_set(layout, file_path, group_name);
 	evas_object_size_hint_weight_set(layout, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
-	evas_object_size_hint_align_set(layout, EVAS_HINT_FILL, EVAS_HINT_FILL);
-	evas_object_size_hint_min_set(layout, ad->w, ad->h);
-	evas_object_resize(layout, ad->w, ad->h);
+
 	evas_object_show(layout);
+
+	elm_object_part_content_set(parent, part_name, layout);
 
 	return layout;
 }
 
-
-
-static Evas_Object *_create_clock(appdata_s *ad)
+void
+app_get_resource(const char *edj_file_in, char *edj_path_out, int edj_path_max)
 {
-	Evas *evas = NULL;
-	Evas_Object *clock = NULL;
-
-	retv_if(!ad, NULL);
-	retv_if(!ad->layout, NULL);
-
-	evas = evas_object_evas_get(ad->layout);
-	retv_if(!evas, NULL);
-
-	/* Clock base */
-	clock = evas_object_rectangle_add(evas);
-	retv_if(!clock, NULL);
-
-	if (ad->w < ad->h) {
-		evas_object_size_hint_min_set(clock, ad->w, ad->w);
-		evas_object_resize(clock, ad->w, ad->w);
-	} else {
-		evas_object_size_hint_min_set(clock, ad->h, ad->h);
-		evas_object_resize(clock, ad->h, ad->h);
+	char *res_path = app_get_resource_path();
+	if (res_path) {
+		snprintf(edj_path_out, edj_path_max, "%s%s", res_path, edj_file_in);
+		free(res_path);
 	}
-	evas_object_color_set(clock, 255, 255, 255, 255);
-	elm_object_part_content_set(ad->layout, "clock", clock);
-	evas_object_show(clock);
-
-	/* Hands of the clock */
-	ad->hour_needle = evas_object_line_add(evas);
-	evas_object_color_set(ad->hour_needle, 0, 0, 0, 255);
-	evas_object_show(ad->hour_needle);
-
-	ad->min_needle = evas_object_line_add(evas);
-	evas_object_color_set(ad->min_needle, 100, 100, 100, 255);
-	evas_object_show(ad->min_needle);
-
-	ad->sec_needle = evas_object_line_add(evas);
-	evas_object_color_set(ad->sec_needle, 255, 0, 0, 255);
-	evas_object_show(ad->sec_needle);
-
-	return clock;
 }
 
+Evas_Object *set_swallow_image_from_path(Evas_Object *layout, char *path, char *part)
+{
+	Evas_Object* img;
+
+	img = elm_image_add(layout);
+	elm_image_file_set(img, get_resource_path(path), NULL);
+	evas_object_size_hint_weight_set(img, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
+	elm_object_part_content_set(layout, part, img);
+	evas_object_show(img);
+
+	return img;
+}
+
+/*
+ * @brief Creates the application's layout.
+ * @return: The Evas_Object of the layout created.
+ */
+static Evas_Object *_create_layout(void* data)
+{
+	appdata_s* ad = data;
+
+	char *edj_path = get_resource_path(MAIN_EDJ);
+	Evas_Object *layout = view_create_layout_for_part(ad->win, edj_path, "main", "default");
+	if (!layout)
+		return NULL;
+
+	evas_object_size_hint_align_set(layout, EVAS_HINT_FILL, EVAS_HINT_FILL);
+	evas_object_size_hint_min_set(layout, ad->w, ad->h);
+	evas_object_resize(layout, ad->w, ad->h);
+
+	ad->bg = set_swallow_image_from_path(layout, "images/watch/cipher_board_bg.png", PART_BACKGROUND);
+	ad->hand_hh = set_swallow_image_from_path(layout, "images/watch/hand_hour.png", PART_HAND_HOUR);
+	ad->hand_mm = set_swallow_image_from_path(layout, "images/watch/hand_minute.png", PART_HAND_MINUTE);
+
+	evas_object_show(layout);
+	return layout;
+}
 
 #define DATA_FILE_PATH "/opt/usr/media/stretching_data.txt"
 
@@ -236,119 +256,39 @@ static void _launch_stretchme_app(void *data)
 
 }
 
-
-static void _clock_set_info_time(void *data, watch_time_h watch_time)
-{
-	appdata_s *ad = NULL;
-	int hour24, minute, second;
-	int w, h = 0;
-	double num = 0;
-
-	ret_if(!data);
-	ret_if(!watch_time);
-
-	ad = (appdata_s *)data;
-
-	watch_time_get_hour24(watch_time, &hour24);
-	watch_time_get_minute(watch_time, &minute);
-	watch_time_get_second(watch_time, &second);
-
-	w = ad->w;
-	h = ad->h;
-
-	num = _get_radian((hour24%12) * HOUR_ANGLE);
-	evas_object_line_xy_set(ad->hour_needle, (w/2), (h/2), (w/2) + HOUR_NEEDLE_SIZE*(sin(num)), (h/2) - HOUR_NEEDLE_SIZE*(cos(num)));
-
-	num = _get_radian(minute * MIN_ANGLE);
-	evas_object_line_xy_set(ad->min_needle, (w/2), (h/2), (w/2) + MIN_NEEDLE_SIZE*(sin(num)), (h/2) - MIN_NEEDLE_SIZE*(cos(num)));
-
-	num = _get_radian(second * SEC_ANGLE);
-	_D("Time : %d : %d : %d", hour24%12, minute, second);
-	evas_object_line_xy_set(ad->sec_needle, (w/2), (h/2), (w/2) + SEC_NEEDLE_SIZE*(sin(num)), (h/2) - SEC_NEEDLE_SIZE*(cos(num)));
-
-#if LAUNCH_AT_EVERY_HOUR
-	if(ad->is_running && minute == 0 && second == 0)
-		if(hour24 > 9 && hour24 < 18)
-			_launch_stretchme_app(data);
-#endif
-}
-
-#if !LAUNCH_AT_EVERY_HOUR
-static void clock_mouse_down_cb(void *data, Evas *evas, Evas_Object *obj, void *event_info)
-{
-   Evas_Event_Mouse_Down *ev = event_info;
-   appdata_s *ad = (appdata_s *)data;
-
-	// TODO: need to check exception
-   ad->is_stretching = EINA_FALSE;
-}
-
-static void clock_mouse_up_cb(void *data, Evas *evas, Evas_Object *obj, void *event_info)
-{
-   Evas_Event_Mouse_Up *ev = event_info;
-   appdata_s *ad = (appdata_s *)data;
-
-   // TODO: need to check exception
-
-   if(ad->is_stretching == EINA_FALSE)
-   {
-   		_D("clicked!!");
-#if 0
-   		// TODO: launch the strecthing ui with new window
-   		create_main_win(ad);
-#else
-		_launch_stretchme_app(ad);
-   }
-
-   ad->is_stretching = EINA_TRUE;
-#endif
-}
-#endif
-
-static void _create_analogwatch(appdata_s *ad)
+/*
+ * @brief: Obtains the current time from watch_time_h and converts to the current_time_t.
+ * @param[watch_time]: The date and time structure acquired in time_tick callback function.
+ * @param[current_time]: The structure of time components extracted from watch_time argument.
+ * @return: The function returns 'true' if the time is successfully converted, otherwise 'false' is returned.
+ */
+static bool _get_time(watch_time_h watch_time, current_time_t *current_time)
 {
 	int ret;
-	watch_time_h watch_time = NULL;
 
-	ret_if(!ad);
+	if (!current_time) {
+		dlog_print(DLOG_ERROR, LOG_TAG, "current_time is NULL");
+		return false;
+	}
 
-	_D("Create analog watch");
+	memset(current_time, 0, sizeof(current_time_t));
 
-	/* Window */
-	ad->win = _create_win(ad);
-	ret_if(!ad->win);
-
-	/* Layout */
-	ad->layout = _create_layout(ad);
-	goto_if(!ad->layout, ERROR);
-
-	/* Clock */
-	ad->clock = _create_clock(ad);
-	goto_if(!ad->clock, ERROR);
-
-#if !LAUNCH_AT_EVERY_HOUR
-	/* Stretching UI */
-	evas_object_event_callback_add(ad->clock, EVAS_CALLBACK_MOUSE_DOWN, clock_mouse_down_cb, ad);
-	evas_object_event_callback_add(ad->clock, EVAS_CALLBACK_MOUSE_UP, clock_mouse_up_cb, ad);
-#endif
+	if (!watch_time) {
+		dlog_print(DLOG_ERROR, LOG_TAG, "watch_time is NULL");
+		return false;
+	}
 
 	ret = watch_time_get_current_time(&watch_time);
 	if (ret != APP_ERROR_NONE) {
-		_E("failed to get current time. err = %d", ret);
+		dlog_print(DLOG_ERROR, LOG_TAG, "failed to get current time. err = %d", ret);
+		return false;
 	}
 
-	_clock_set_info_time(ad, watch_time);
+	watch_time_get_hour24(watch_time, &current_time->hour);
+	watch_time_get_minute(watch_time, &current_time->minute);
+	watch_time_get_second(watch_time, &current_time->second);
 
-	return;
-
-ERROR:
-	if (ad->sec_needle) evas_object_del(ad->sec_needle);
-	if (ad->min_needle) evas_object_del(ad->min_needle);
-	if (ad->hour_needle) evas_object_del(ad->hour_needle);
-	if (ad->layout) evas_object_del(ad->layout);
-	if (ad->win) evas_object_del(ad->win);
-
-	return;
+	return true;
 }
 
 static void _destroy_analogwatch(appdata_s *ad)
@@ -356,11 +296,9 @@ static void _destroy_analogwatch(appdata_s *ad)
 	ret_if(!ad);
 
 	_D("Destroy analog watch");
-
-	if (ad->sec_needle) evas_object_del(ad->sec_needle);
-	if (ad->min_needle) evas_object_del(ad->min_needle);
-	if (ad->hour_needle) evas_object_del(ad->hour_needle);
-	if (ad->clock) evas_object_del(ad->clock);
+	if (ad->hand_mm) evas_object_del(ad->hand_mm);
+	if (ad->hand_hh) evas_object_del(ad->hand_hh);
+	if (ad->bg) evas_object_del(ad->bg);
 	if (ad->layout) evas_object_del(ad->layout);
 	if (ad->win) evas_object_del(ad->win);
 }
@@ -442,7 +380,7 @@ static bool app_create(int width, int height, void* user_data)
 	ad->w = width;
 	ad->h = height;
 
-	_create_analogwatch(ad);
+	view_create(ad);
 
 	return true;
 }
@@ -501,8 +439,6 @@ static void app_resume(void* user_data)
 	// Acquire the resources which need to draw the normal watch
 }
 
-
-
 static void app_terminate(void* user_data)
 {
 	// Releases all resources;
@@ -516,43 +452,86 @@ static void app_terminate(void* user_data)
 }
 
 
-
-static void app_time_tick(watch_time_h watch_time, void* user_data)
+/*
+ * @brief Draws the clock's hands.
+ * @param[current_time]: the structure of time components.
+ */
+void view_set_display_time(current_time_t current_time, void* data)
 {
-	appdata_s *ad = (appdata_s *)user_data;
+	appdata_s* ad = data;
 
-	ad->is_running = EINA_TRUE;
-	_clock_set_info_time(ad, watch_time);
+	Edje_Message_Int_Set *msg = malloc(sizeof(Edje_Message_Int_Set) + 2 * sizeof(int));
+
+	msg->count = 3;
+	msg->val[0] = current_time.hour;
+	msg->val[1] = current_time.minute;
+	msg->val[2] = current_time.second;
+
+	edje_object_message_send(elm_layout_edje_get(ad->layout), EDJE_MESSAGE_INT_SET, MSG_ID_SET_TIME, msg);
+
+	free(msg);
+}
+
+static void app_time_tick(watch_time_h watch_time, void* data)
+{
+
+	current_time_t current_time = {0,};
+
+	if (_get_time(watch_time, &current_time))
+		view_set_display_time(current_time, data);
 }
 
 
 
 static void app_ambient_tick(watch_time_h watch_time, void* user_data)
 {
-	appdata_s *ad = (appdata_s *)user_data;
-
-	ad->is_running = EINA_TRUE;
-	_clock_set_info_time(ad, watch_time);
+	app_time_tick(watch_time, user_data);
 }
 
-
-
-static void app_ambient_changed(bool ambient_mode, void* user_data)
+/*
+ * @brief Toggles the ambient mode on (draws a second hand) and off (hides a second hand).
+ * @param[current_time]: the structure of time components.
+ */
+void view_toggle_ambient_mode(bool ambient_mode, void* data)
 {
-	if (ambient_mode) {
-		// Prepare to enter the ambient mode
-	}
-	else {
-		// Prepare to exit the ambient mode
-	}
+	appdata_s* ad = data;
+	Edje_Message_Int msg = {0,};
+
+	msg.val = (int)ambient_mode;
+
+	edje_object_message_send(elm_layout_edje_get(ad->layout), EDJE_MESSAGE_INT, MSG_ID_AMBIENT_MODE, &msg);
 }
 
+static void app_ambient_changed(bool ambient_mode, void* data)
+{
+	appdata_s* ad = data;
 
+	_D("app_ambient_changed bool %d\n", ambient_mode);
+	if(ambient_mode) {
+		evas_object_del(ad->bg);
+		evas_object_del(ad->hand_hh);
+		evas_object_del(ad->hand_mm);
+		ad->bg = set_swallow_image_from_path(ad->layout, "images/watch/black.png", PART_BACKGROUND);
+		ad->hand_hh = set_swallow_image_from_path(ad->layout, "images/watch/hand_hour_w.png", PART_HAND_HOUR);
+		ad->hand_mm = set_swallow_image_from_path(ad->layout, "images/watch/hand_minute_w.png", PART_HAND_MINUTE);
+	}else {
+		evas_object_del(ad->bg);
+		evas_object_del(ad->hand_hh);
+		evas_object_del(ad->hand_mm);
+		ad->bg = set_swallow_image_from_path(ad->layout, "images/watch/cipher_board_bg.png", PART_BACKGROUND);
+		ad->hand_hh = set_swallow_image_from_path(ad->layout, "images/watch/hand_hour.png", PART_HAND_HOUR);
+		ad->hand_mm = set_swallow_image_from_path(ad->layout, "images/watch/hand_minute.png", PART_HAND_MINUTE);
+
+	}
+
+	view_toggle_ambient_mode(ambient_mode, data);
+}
 
 int main(int argc, char *argv[])
 {
 	appdata_s ad = {0,};
 	int ret = 0;
+	_D("main\n");
 
 	watch_app_lifecycle_callback_s event_callback = {0,};
 

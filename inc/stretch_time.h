@@ -27,56 +27,34 @@
 
 #define MAX_LENGTH_PATH 1024
 
-#define HOUR_ANGLE 30
-#define MIN_ANGLE 6
-#define SEC_ANGLE 6
-#define HOUR_NEEDLE_SIZE 70
-#define MIN_NEEDLE_SIZE 100
-#define SEC_NEEDLE_SIZE 110
+struct _current_time {
+	int hour;
+	int minute;
+	int second;
+};
+
+typedef struct _current_time current_time_t;
 
 typedef struct appdata{
 	Evas_Object *win;
 	Evas_Object *layout;
-
-	Evas_Object *clock;
-	Evas_Object *hour_needle;
-	Evas_Object *min_needle;
-	Evas_Object *sec_needle;
+	Evas_Object *bg;
+	Evas_Object *hand_hh;
+	Evas_Object *hand_mm;
 
 	int w;
 	int h;
 
-	/* about stretching */
-	Evas_Object *st_win;
-	Evas_Object *st_nf;
-	Evas_Object *st_layout;
-	Eext_Circle_Surface *st_circle_surface;
 
-	Evas_Object *st_datetime;
-	Evas_Object *st_label;
-	struct tm st_saved_time;
-
-	// view
-	Ecore_Timer * fold_timer;
-	Eina_Bool is_stretch_success;
-
-	Eina_Bool is_stretching;
-	Eina_Bool is_running;
 } appdata_s;
 
-static inline const char *get_resource_path(const char * file_path);
+static inline char *get_resource_path(const char * file_path);
 
 #if !defined(PACKAGE)
 #define PACKAGE "org.example.stretchtime"
 #endif
 
-#define EDJPATH "edje"
-#define LAYOUTEDJ get_resource_path(EDJPATH"/main.edj")
-
-#define EDJ_FILE "edje/stretch_ui_layout.edj"
-#define ICON_DIR "/opt/usr/apps/org.example.stretchme/res/images"
-
-static inline const char *get_resource_path(const char *file_path)
+static inline char *get_resource_path(const char *file_path)
 {
 	static char absolute_path[MAX_LENGTH_PATH] = {'\0'};
 
