@@ -61,6 +61,7 @@ typedef struct appdata{
 	Eina_Bool is_stretch_success;
 
 	Eina_Bool is_stretching;
+	Eina_Bool is_running;
 } appdata_s;
 
 static inline const char *get_resource_path(const char * file_path);

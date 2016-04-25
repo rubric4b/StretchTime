@@ -32,6 +32,8 @@
 #include <unistd.h>
 #include <stdio.h>
 
+#define LAUNCH_AT_EVERY_HOUR 1
+
 void
 app_get_resource(const char *edj_file_in, char *edj_path_out, int edj_path_max)
 {
@@ -160,37 +162,6 @@ static Evas_Object *_create_clock(appdata_s *ad)
 }
 
 
-
-static void _clock_set_info_time(void *data, watch_time_h watch_time)
-{
-	appdata_s *ad = NULL;
-	int hour24, minute, second;
-	int w, h = 0;
-	double num = 0;
-
-	ret_if(!data);
-	ret_if(!watch_time);
-
-	ad = (appdata_s *)data;
-
-	watch_time_get_hour24(watch_time, &hour24);
-	watch_time_get_minute(watch_time, &minute);
-	watch_time_get_second(watch_time, &second);
-
-	w = ad->w;
-	h = ad->h;
-
-	num = _get_radian((hour24%12) * HOUR_ANGLE);
-	evas_object_line_xy_set(ad->hour_needle, (w/2), (h/2), (w/2) + HOUR_NEEDLE_SIZE*(sin(num)), (h/2) - HOUR_NEEDLE_SIZE*(cos(num)));
-
-	num = _get_radian(minute * MIN_ANGLE);
-	evas_object_line_xy_set(ad->min_needle, (w/2), (h/2), (w/2) + MIN_NEEDLE_SIZE*(sin(num)), (h/2) - MIN_NEEDLE_SIZE*(cos(num)));
-
-	num = _get_radian(second * SEC_ANGLE);
-	_D("Time : %d : %d : %d", hour24%12, minute, second);
-	evas_object_line_xy_set(ad->sec_needle, (w/2), (h/2), (w/2) + SEC_NEEDLE_SIZE*(sin(num)), (h/2) - SEC_NEEDLE_SIZE*(cos(num)));
-}
-
 #define DATA_FILE_PATH "/opt/usr/media/stretching_data.txt"
 
 static void _launch_stretchme_app(void *data)
@@ -265,6 +236,44 @@ static void _launch_stretchme_app(void *data)
 
 }
 
+
+static void _clock_set_info_time(void *data, watch_time_h watch_time)
+{
+	appdata_s *ad = NULL;
+	int hour24, minute, second;
+	int w, h = 0;
+	double num = 0;
+
+	ret_if(!data);
+	ret_if(!watch_time);
+
+	ad = (appdata_s *)data;
+
+	watch_time_get_hour24(watch_time, &hour24);
+	watch_time_get_minute(watch_time, &minute);
+	watch_time_get_second(watch_time, &second);
+
+	w = ad->w;
+	h = ad->h;
+
+	num = _get_radian((hour24%12) * HOUR_ANGLE);
+	evas_object_line_xy_set(ad->hour_needle, (w/2), (h/2), (w/2) + HOUR_NEEDLE_SIZE*(sin(num)), (h/2) - HOUR_NEEDLE_SIZE*(cos(num)));
+
+	num = _get_radian(minute * MIN_ANGLE);
+	evas_object_line_xy_set(ad->min_needle, (w/2), (h/2), (w/2) + MIN_NEEDLE_SIZE*(sin(num)), (h/2) - MIN_NEEDLE_SIZE*(cos(num)));
+
+	num = _get_radian(second * SEC_ANGLE);
+	_D("Time : %d : %d : %d", hour24%12, minute, second);
+	evas_object_line_xy_set(ad->sec_needle, (w/2), (h/2), (w/2) + SEC_NEEDLE_SIZE*(sin(num)), (h/2) - SEC_NEEDLE_SIZE*(cos(num)));
+
+#if LAUNCH_AT_EVERY_HOUR
+	if(ad->is_running && minute == 0 && second == 0)
+		if(hour24 > 9 && hour24 < 18)
+			_launch_stretchme_app(data);
+#endif
+}
+
+#if !LAUNCH_AT_EVERY_HOUR
 static void clock_mouse_down_cb(void *data, Evas *evas, Evas_Object *obj, void *event_info)
 {
    Evas_Event_Mouse_Down *ev = event_info;
@@ -289,12 +298,12 @@ static void clock_mouse_up_cb(void *data, Evas *evas, Evas_Object *obj, void *ev
    		create_main_win(ad);
 #else
 		_launch_stretchme_app(ad);
-#endif
    }
 
    ad->is_stretching = EINA_TRUE;
+#endif
 }
-
+#endif
 
 static void _create_analogwatch(appdata_s *ad)
 {
@@ -317,9 +326,11 @@ static void _create_analogwatch(appdata_s *ad)
 	ad->clock = _create_clock(ad);
 	goto_if(!ad->clock, ERROR);
 
+#if !LAUNCH_AT_EVERY_HOUR
 	/* Stretching UI */
 	evas_object_event_callback_add(ad->clock, EVAS_CALLBACK_MOUSE_DOWN, clock_mouse_down_cb, ad);
 	evas_object_event_callback_add(ad->clock, EVAS_CALLBACK_MOUSE_UP, clock_mouse_up_cb, ad);
+#endif
 
 	ret = watch_time_get_current_time(&watch_time);
 	if (ret != APP_ERROR_NONE) {
@@ -510,6 +521,7 @@ static void app_time_tick(watch_time_h watch_time, void* user_data)
 {
 	appdata_s *ad = (appdata_s *)user_data;
 
+	ad->is_running = EINA_TRUE;
 	_clock_set_info_time(ad, watch_time);
 }
 
@@ -519,6 +531,7 @@ static void app_ambient_tick(watch_time_h watch_time, void* user_data)
 {
 	appdata_s *ad = (appdata_s *)user_data;
 
+	ad->is_running = EINA_TRUE;
 	_clock_set_info_time(ad, watch_time);
 }
 
