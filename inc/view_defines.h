@@ -20,9 +20,19 @@
 #define PART_BACKGROUND "background"
 #define PART_HAND_HOUR "hand_hour"
 #define PART_HAND_MINUTE "hand_minute"
+#define PART_HAND_SECOND "hand_second"
+#define PART_ICON_CENTER "icon_center"
+#define PART_APP_ICON "stretch_app"
+#define PART_APP_ICON_DUMMY "stretch_app_dummy"
+#define PART_APP_ICON_BADGE "stretch_app_badge"
+#define PART_APP_ICON_BADGE_COUNTER "stretch_app_badge_counter"
 
 #define MSG_ID_SET_TIME 1
 #define MSG_ID_AMBIENT_MODE 2
+#define MSG_ID_SET_BADGE_APP_ICON 3
+
+#define SIGNAL_APP_ICON_PRESS "signal_app_icon_press"
+#define SIGNAL_APP_ICON_UNPRESS "signal_app_icon_unpress"
 
 
 #endif
