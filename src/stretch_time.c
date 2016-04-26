@@ -50,8 +50,8 @@ void update_alram_time(void* data) {
 		time(&current_time); //get current time
 
 		//우선 기록
-//		time1 = current_time + 600; // after 10 min
-		time1 = current_time + 60; //after 1 min TEST
+		time1 = current_time + 600; // after 10 min
+//		time1 = current_time + 60; //after 1 min TEST
 		alram = *localtime(&time1);
 		ad->alram_time.hour = alram.tm_hour;
 		ad->alram_time.minute = alram.tm_min;
@@ -482,8 +482,8 @@ static void app_time_tick(watch_time_h watch_time, void* data)
 //	_D("tick %2d:%2d:%2d, mode %d\n", current_time.hour, current_time.minute, current_time.second, ad->is_ambient);
 //	_D("alram set %2d:%2d:%2d\n", ad->alram_time.hour, ad->alram_time.minute, ad->alram_time.second);
 
-//	if(current_time.hour >= 10 && current_time.hour <= 18 && ad->is_alram_set) {
-	if( ad->is_alram_set) { // TESTCODE
+	if(current_time.hour >= 10 && current_time.hour <= 18 && ad->is_alram_set) {
+//	if( ad->is_alram_set) { // TESTCODE
 		if (ad->alram_time.hour == current_time.hour &&
 			ad->alram_time.minute == current_time.minute ) {
 			if(!ad->is_ambient) {
