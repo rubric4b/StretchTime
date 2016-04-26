@@ -105,11 +105,13 @@ popup_hide_cb(void *data, Evas_Object *obj, void *event_info)
 
 //    ad->is_alram_set = false;
     time(&current_time); //get current time
-    current_time += 3600;
+    current_time += 3600; // after 1 hour
     alram = *localtime(&current_time);
 
     ad->alram_time.hour = alram.tm_hour;
     ad->alram_time.minute = alram.tm_min;
+    ad->alram_time2 = current_time;
+    ad->is_alram_set = true;
 
     _D("stretch canceled : alram set %2d:%2d:%2d\n", ad->alram_time.hour, ad->alram_time.minute, ad->alram_time.second);
 
@@ -122,6 +124,7 @@ popup_hide_finished_cb(void *data, Evas_Object *obj, void *event_info)
     appdata_s *ad = (appdata_s *) data;
     if(!data) return;
     evas_object_del(ad->popup);
+    ad->popup = NULL;
 }
 
 void popup_training_cb(void *data, Evas_Object *obj, void *event_info)
@@ -132,8 +135,6 @@ void popup_training_cb(void *data, Evas_Object *obj, void *event_info)
     appdata_s *ad = (appdata_s *) data;
 
     if(ad->popup) return;
-
-    vibrate(150, 99);
 
     ad->popup = elm_popup_add(ad->layout);
     elm_object_style_set(ad->popup, "circle");

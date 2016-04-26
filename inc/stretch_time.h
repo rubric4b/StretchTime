@@ -53,6 +53,8 @@ typedef struct appdata{
 	bool is_ambient;
 
 	current_time_t alram_time;
+
+	time_t alram_time2;
 	time_t last_success_time;
 
 	bool is_alram_set;

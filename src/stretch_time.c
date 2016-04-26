@@ -33,75 +33,46 @@ Evas_Object *view_create_win(const char *pkg_name, void* data);
 void update_alram_time(void* data) {
 	appdata_s* ad = data;
 	time_t current_time, time1;
-	struct tm success, alram;
+	struct tm alram;
 	time_t last_success_time;
 	bool is_read = get_stored_last_time(&last_success_time, ST_SUCCESS);
 	bool is_success_change = false;
 	struct tm test = *localtime(&last_success_time);
 	_D("is_read %d, last_succes_time %d:%d:%d, ad->last %d\n", is_read, test.tm_hour,test.tm_min,test.tm_sec, ad->last_success_time);
 
+	time(&current_time); //get current time
+
+	// if alarm time was expired already, reset
+	if(is_read && current_time > ad->alram_time2)
+		ad->is_alram_set = false;
+
+	// if last_success_time was updated, reset
 	if(is_read && (last_success_time != ad->last_success_time)) {
 		is_success_change = true;
 		ad->last_success_time = last_success_time;
+		ad->is_alram_set = false;
 	}
 
-	if(!ad->is_alram_set || is_success_change) {
+	if(ad->is_alram_set == false)
+	{
+		// if current time is not elapsed less than 1 hour from last success
+		if(difftime(current_time, last_success_time) < 60 * 60 /*1hour*/)
+		{
+			time1 = last_success_time + 60 * 60; // after 1 hour from last success
+		}
+		else
+		{
+			time1 = current_time + 60 * 5; // after 5 min from current
+		}
+		ad->is_alram_set = true;
 
-		time(&current_time); //get current time
-
-		//우선 기록
-		time1 = current_time + 600; // after 10 min
-//		time1 = current_time + 60; //after 1 min TEST
 		alram = *localtime(&time1);
+		ad->alram_time2 = time1; // raw time data update
 		ad->alram_time.hour = alram.tm_hour;
 		ad->alram_time.minute = alram.tm_min;
 
-		if (difftime(current_time, ad->last_success_time) < 3600) {
-			success = *localtime(&ad->last_success_time);
-			ad->alram_time.hour = success.tm_hour + 1; // 1시간 뒤로
-			ad->alram_time.minute = success.tm_min;
-		}
-
-		ad->is_alram_set = true;
-		_D("alram set %2d:%2d:%2d\n", ad->alram_time.hour, ad->alram_time.minute, ad->alram_time.second);
-
+		_D("alram reset %2d:%2d:%2d\n", ad->alram_time.hour, ad->alram_time.minute, ad->alram_time.second);
 	}
-
-
-	/*if(!ad->is_alram_set) {
-
-		if(today.tm_hour <= 10) {
-
-			ad->alram_time.hour = 11;
-
-		}
-		else if(today.tm_hour >= 18) {
-
-			ad->alram_time.hour = 0;
-
-		} else {
-
-			ad->alram_time.hour = today.tm_hour + 1;
-		}
-
-
-		ad->alram_time.minute = 0;
-		ad->alram_time.second = 0;
-
-		ad->is_alram_set = true;
-	}*/
-
-/*
-	if(!ad->is_alram_set) { //TESTCODE!
-
-		ad->alram_time.hour = today.tm_hour;
-		ad->alram_time.minute = today.tm_min + 1;
-		ad->alram_time.second = 0;
-
-		ad->is_alram_set = true;
-		_D("alram set %2d:%2d:%2d\n", ad->alram_time.hour, ad->alram_time.minute, ad->alram_time.second);
-	}
-*/
 
 }
 
@@ -368,7 +339,6 @@ static bool app_create(int width, int height, void* user_data)
 	ad->h = height;
 
 	view_create(ad);
-	update_alram_time(ad);
 
 	return true;
 }
@@ -435,7 +405,6 @@ static void app_resume(void* user_data)
 		ad->resume_cb = NULL;
 	}
 
-	update_alram_time(user_data);
 }
 
 static void app_terminate(void* user_data)
@@ -482,14 +451,29 @@ static void app_time_tick(watch_time_h watch_time, void* data)
 //	_D("tick %2d:%2d:%2d, mode %d\n", current_time.hour, current_time.minute, current_time.second, ad->is_ambient);
 //	_D("alram set %2d:%2d:%2d\n", ad->alram_time.hour, ad->alram_time.minute, ad->alram_time.second);
 
+	if(current_time.second == 0)
+	{
+		// check and update alarm time at every minute
+		update_alram_time(data);
+	}
+
 	if(current_time.hour >= 10 && current_time.hour <= 18 && ad->is_alram_set) {
 //	if( ad->is_alram_set) { // TESTCODE
+
+		if(ad->popup && current_time.second == 0)
+		{
+			vibrate(1000, 99);
+		}
+
 		if (ad->alram_time.hour == current_time.hour &&
-			ad->alram_time.minute == current_time.minute ) {
+			ad->alram_time.minute == current_time.minute &&
+			ad->popup == NULL) {
+
+			vibrate(1000, 99);
+
 			if(!ad->is_ambient) {
 				popup_training_cb(data, NULL, NULL);
 			}else{
-				vibrate(300, 99);
 				ad->resume_cb = popup_training_cb;
 			}
 		}
