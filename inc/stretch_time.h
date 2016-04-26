@@ -28,6 +28,11 @@
 #define MAX_LENGTH_PATH 1024
 #define MAIN_EDJ "edje/main.edj"
 
+#if !defined(PACKAGE)
+#define PACKAGE "org.tizen.stretchtime"
+#endif
+#define STRETCHME_APP_ID "org.tizen.stretchme"
+
 struct _current_time {
 	int hour;
 	int minute;
@@ -36,7 +41,12 @@ struct _current_time {
 
 typedef struct _current_time current_time_t;
 
+typedef enum {
+	VIEW_ICON_ID_APP
+} view_icon_id_t;
+
 typedef void      (*Resume_cb)(void *data, Evas_Object *obj, void *event_info);
+typedef void (*Icon_Pressed_cb)(view_icon_id_t id);
 
 
 typedef struct appdata{
@@ -45,6 +55,7 @@ typedef struct appdata{
 	Evas_Object *bg;
 	Evas_Object *hand_hh;
 	Evas_Object *hand_mm;
+	Evas_Object *dummy;
 	Evas_Object *popup;
 
 	int w;
@@ -60,15 +71,11 @@ typedef struct appdata{
 	bool is_alram_set;
 
 	Resume_cb resume_cb;
-
+	Icon_Pressed_cb icon_cb;
 
 } appdata_s;
 
 static inline char *get_resource_path(const char * file_path);
-
-#if !defined(PACKAGE)
-#define PACKAGE "org.example.stretchtime"
-#endif
 
 static inline char *get_resource_path(const char *file_path)
 {

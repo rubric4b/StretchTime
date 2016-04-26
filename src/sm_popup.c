@@ -13,7 +13,7 @@ static void _launch_stretchme_app(void *data)
 
     app_control_create(&app_control);
     app_control_set_operation(app_control, APP_CONTROL_OPERATION_DEFAULT);
-    app_control_set_app_id(app_control, "org.example.stretchme");
+    app_control_set_app_id(app_control, STRETCHME_APP_ID);
 
     // app parameter : time
     // TODO: emit the last time instead of the current
@@ -106,6 +106,7 @@ popup_hide_cb(void *data, Evas_Object *obj, void *event_info)
 //    ad->is_alram_set = false;
     time(&current_time); //get current time
     current_time += 3600; // after 1 hour
+//    current_time += 60; // TESTCODE 1 min
     alram = *localtime(&current_time);
 
     ad->alram_time.hour = alram.tm_hour;

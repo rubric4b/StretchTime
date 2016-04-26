@@ -20,6 +20,7 @@
 #include <watch_app.h>
 #include <watch_app_efl.h>
 #include <device/haptic.h>
+#include <stdlib.h>
 
 #include "stretch_time.h"
 #include "sm_data.h"
@@ -30,15 +31,46 @@
 
 Evas_Object *view_create_win(const char *pkg_name, void* data);
 
+/*
+ * @brief Sends a message to the EDJE script in order to set the badge's value. This function handles the
+ * 'missed calls' and the 'unread messages' badges depending on the message_id.
+ * @param[message_id]: the message id. Available messages: MSG_ID_SET_BADGE_MISSED_CALLS, MSG_ID_SET_BADGE_UNREAD_MESSAGES.
+ */
+static void _set_badge(int message_id, int badge_count, void* data)
+{
+	appdata_s* ad = data;
+
+	Edje_Message_Int msg = {0,};
+
+	if (!ad->layout) {
+		dlog_print(DLOG_ERROR, LOG_TAG, "Invalid layout object.");
+		return;
+	}
+
+	msg.val = badge_count;
+
+	edje_object_message_send(elm_layout_edje_get(ad->layout), EDJE_MESSAGE_INT, message_id, &msg);
+}
+
+/*
+ * @brief Sets the badge counter for 'missed calls' icon.
+ * @param[count]: the number of missed calls to be displayed.
+ */
+void view_set_bagde_missed_calls(int count, void* data)
+{
+	_set_badge(MSG_ID_SET_BADGE_APP_ICON, count, data);
+}
+
+
 void update_alram_time(void* data) {
 	appdata_s* ad = data;
 	time_t current_time, time1;
 	struct tm alram;
 	time_t last_success_time;
 	bool is_read = get_stored_last_time(&last_success_time, ST_SUCCESS);
-	bool is_success_change = false;
 	struct tm test = *localtime(&last_success_time);
 	_D("is_read %d, last_succes_time %d:%d:%d, ad->last %d\n", is_read, test.tm_hour,test.tm_min,test.tm_sec, ad->last_success_time);
+	_D("alram time is %2d:%2d:%2d\n", ad->alram_time.hour, ad->alram_time.minute, ad->alram_time.second);
 
 	time(&current_time); //get current time
 
@@ -48,7 +80,6 @@ void update_alram_time(void* data) {
 
 	// if last_success_time was updated, reset
 	if(is_read && (last_success_time != ad->last_success_time)) {
-		is_success_change = true;
 		ad->last_success_time = last_success_time;
 		ad->is_alram_set = false;
 	}
@@ -59,10 +90,12 @@ void update_alram_time(void* data) {
 		if(difftime(current_time, last_success_time) < 60 * 60 /*1hour*/)
 		{
 			time1 = last_success_time + 60 * 60; // after 1 hour from last success
+//			time1 = current_time + 60 * 1; // TESTCODE 1 min!
 		}
 		else
 		{
 			time1 = current_time + 60 * 5; // after 5 min from current
+//			time1 = current_time + 60 * 1; // TESTCODE 1 min!
 		}
 		ad->is_alram_set = true;
 
@@ -72,6 +105,13 @@ void update_alram_time(void* data) {
 		ad->alram_time.minute = alram.tm_min;
 
 		_D("alram reset %2d:%2d:%2d\n", ad->alram_time.hour, ad->alram_time.minute, ad->alram_time.second);
+	}
+
+
+	int count = div((int)difftime(current_time, ad->last_success_time), 60 * 60).quot;
+//	count = 11; //TESTCODE!
+	if(!ad->is_ambient) {
+		view_set_bagde_missed_calls(count, data);
 	}
 
 }
@@ -111,6 +151,8 @@ void view_create(void* data)
 		dlog_print(DLOG_ERROR, LOG_TAG, "failed to create main layout.");
 		return;
 	}
+
+
 
 	evas_object_show(ad->win);
 }
@@ -189,6 +231,115 @@ Evas_Object *set_swallow_image_from_path(Evas_Object *layout, char *path, char *
 }
 
 /*
+ * @brief The callback function invoked in response to app_control_send_launch_request().
+ * @param[request]: the handle of app_control request.
+ * @param[reply]: the handle of app_control response.
+ * @param[result]: the result of app_control_send_launch_request() invocation.
+ * @param[data]: the user data passed to the app_control_send_launch_request() function.
+ */
+static void _app_launch_request_cb(app_control_h request, app_control_h reply, app_control_result_e result, void *data)
+{
+	const char *app_id = (const char *)data;
+
+	switch (result) {
+		case APP_CONTROL_RESULT_SUCCEEDED:
+			dlog_print(DLOG_INFO, LOG_TAG, "The '%s' launch request succeeded.", app_id);
+			break;
+		case APP_CONTROL_RESULT_CANCELED:
+			dlog_print(DLOG_WARN, LOG_TAG, "The '%s' launch request was canceled.", app_id);
+			break;
+		case APP_CONTROL_RESULT_FAILED:
+			dlog_print(DLOG_WARN, LOG_TAG, "The '%s' launch request failed.", app_id);
+			break;
+		default:
+			dlog_print(DLOG_ERROR, LOG_TAG, "The '%s' launch request error.", app_id);
+			break;
+	}
+}
+
+/*
+ * @brief The callback function invoked on application's icon tap.
+ * @param[id]: the identifier of the tapped application.
+ */
+static void _icon_pressed_cb(view_icon_id_t id)
+{
+	app_control_h app_ctrl = NULL;
+	const char *app_id = NULL;
+
+	if (app_control_create(&app_ctrl) != APP_CONTROL_ERROR_NONE) {
+		dlog_print(DLOG_ERROR, LOG_TAG, "app_control_create() is failed.");
+		return;
+	}
+
+	switch (id) {
+		case VIEW_ICON_ID_APP:
+			app_id = STRETCHME_APP_ID;
+			break;
+		default:
+			dlog_print(DLOG_WARN, LOG_TAG, "Unknown id of the tapped application's icon.");
+			app_control_destroy(app_ctrl);
+			return;
+	}
+
+	if (app_control_set_app_id(app_ctrl, app_id) != APP_CONTROL_ERROR_NONE) {
+		dlog_print(DLOG_ERROR, LOG_TAG, "app_control_set_app_id() is failed.");
+		app_control_destroy(app_ctrl);
+		return;
+	}
+
+	if (app_control_send_launch_request(app_ctrl, _app_launch_request_cb, (void *)app_id) != APP_CONTROL_ERROR_NONE)
+		dlog_print(DLOG_ERROR, LOG_TAG, "app_control_send_launch_request() is failed.");
+
+	app_control_destroy(app_ctrl);
+}
+
+/*
+ * @brief Sends a signal to the EDJE script.
+ * @param[layout]: the target layout for the signal.
+ * @param[target_part]: the target part's name within the layout for the signal.
+ * @param[signal_name]: the name of the signal to be sent.
+ */
+static void _emit_signal(Evas_Object *layout, const char *target_part, const char *signal_name)
+{
+	if (!layout) {
+		dlog_print(DLOG_ERROR, LOG_TAG, "Invalid input argument.");
+		return;
+	}
+
+	elm_object_signal_emit(layout, signal_name, target_part);
+}
+
+
+/*
+ * @brief The callback function invoked on mouse down event over the 'missed calls' icon.
+ * @param[data]: the user data passed to the elm_object_signal_callback_add function.
+ * @param[obj]: the calling object (main layout in this case).
+ * @param[emission]: the signal emitted from EDJE resulting with the function invocation.
+ * @param[source]: the part name where the signal was emitted from.
+ */
+static void _app_icon_mouse_down_cb(void *data, Evas_Object *obj, const char *emission, const char *source)
+{
+	_emit_signal(obj, PART_APP_ICON, SIGNAL_APP_ICON_PRESS);
+}
+
+/*
+ * @brief The callback function invoked on mouse up event over the 'missed calls' icon.
+ * @param[data]: the user data passed to the elm_object_signal_callback_add function.
+ * @param[obj]: the calling object (main layout in this case).
+ * @param[emission]: the signal emitted from EDJE resulting with the function invocation.
+ * @param[source]: the part name where the signal was emitted from.
+ */
+static void _app_icon_mouse_up_cb(void *data, Evas_Object *obj, const char *emission, const char *source)
+{
+	appdata_s* ad = data;
+
+	_emit_signal(obj, PART_APP_ICON, SIGNAL_APP_ICON_UNPRESS);
+
+	if (ad->icon_cb)
+		ad->icon_cb(VIEW_ICON_ID_APP);
+}
+
+/*
  * @brief Creates the application's layout.
  * @return: The Evas_Object of the layout created.
  */
@@ -210,6 +361,10 @@ static Evas_Object *_create_layout(void* data)
 	ad->hand_mm = set_swallow_image_from_path(layout, "images/watch/hand_minute.png", PART_HAND_MINUTE);
 
 	evas_object_show(layout);
+
+	elm_object_signal_callback_add(layout, "mouse,down,1", PART_APP_ICON, _app_icon_mouse_down_cb, data);
+	elm_object_signal_callback_add(layout, "mouse,up,1", PART_APP_ICON, _app_icon_mouse_up_cb, data);
+
 	return layout;
 }
 
@@ -254,6 +409,7 @@ static void _destroy_analogwatch(appdata_s *ad)
 	ret_if(!ad);
 
 	_D("Destroy analog watch");
+	if (ad->dummy) evas_object_del(ad->dummy);
 	if (ad->hand_mm) evas_object_del(ad->hand_mm);
 	if (ad->hand_hh) evas_object_del(ad->hand_hh);
 	if (ad->bg) evas_object_del(ad->bg);
@@ -340,6 +496,8 @@ static bool app_create(int width, int height, void* user_data)
 
 	view_create(ad);
 
+	ad->icon_cb = _icon_pressed_cb;
+
 	return true;
 }
 
@@ -405,6 +563,8 @@ static void app_resume(void* user_data)
 		ad->resume_cb = NULL;
 	}
 
+	update_alram_time(user_data);
+
 }
 
 static void app_terminate(void* user_data)
@@ -457,7 +617,7 @@ static void app_time_tick(watch_time_h watch_time, void* data)
 		update_alram_time(data);
 	}
 
-	if(current_time.hour >= 10 && current_time.hour <= 18 && ad->is_alram_set) {
+	if(current_time.hour >= 10 && current_time.hour < 22 && ad->is_alram_set) {
 //	if( ad->is_alram_set) { // TESTCODE
 
 		if(ad->popup && current_time.second == 0)
@@ -515,13 +675,16 @@ static void app_ambient_changed(bool ambient_mode, void* data)
 		ad->bg = set_swallow_image_from_path(ad->layout, "images/watch/black.png", PART_BACKGROUND);
 		ad->hand_hh = set_swallow_image_from_path(ad->layout, "images/watch/hand_hour_w.png", PART_HAND_HOUR);
 		ad->hand_mm = set_swallow_image_from_path(ad->layout, "images/watch/hand_minute_w.png", PART_HAND_MINUTE);
+		ad->dummy = set_swallow_image_from_path(ad->layout, "images/watch/black.png", PART_APP_ICON_DUMMY);
 	}else {
 		evas_object_del(ad->bg);
 		evas_object_del(ad->hand_hh);
 		evas_object_del(ad->hand_mm);
+		evas_object_del(ad->dummy);
 		ad->bg = set_swallow_image_from_path(ad->layout, "images/watch/cipher_board_bg.png", PART_BACKGROUND);
 		ad->hand_hh = set_swallow_image_from_path(ad->layout, "images/watch/hand_hour.png", PART_HAND_HOUR);
 		ad->hand_mm = set_swallow_image_from_path(ad->layout, "images/watch/hand_minute.png", PART_HAND_MINUTE);
+		ad->dummy = NULL;
 
 	}
 
