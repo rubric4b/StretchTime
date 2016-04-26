@@ -22,14 +22,89 @@
 #include <device/haptic.h>
 
 #include "stretch_time.h"
+#include "sm_data.h"
 #include "sm_popup.h"
 #include "view_defines.h"
 #include "log.h"
 
-#define MAIN_EDJ "edje/main.edj"
-#define PI 3.1415926535897
 
 Evas_Object *view_create_win(const char *pkg_name, void* data);
+
+void update_alram_time(void* data) {
+	appdata_s* ad = data;
+	time_t current_time, time1;
+	struct tm success, alram;
+	time_t last_success_time;
+	bool is_read = get_stored_last_time(&last_success_time, ST_SUCCESS);
+	bool is_success_change = false;
+	struct tm test = *localtime(&last_success_time);
+	_D("is_read %d, last_succes_time %d:%d:%d, ad->last %d\n", is_read, test.tm_hour,test.tm_min,test.tm_sec, ad->last_success_time);
+
+	if(is_read && (last_success_time != ad->last_success_time)) {
+		is_success_change = true;
+		ad->last_success_time = last_success_time;
+	}
+
+	if(!ad->is_alram_set || is_success_change) {
+
+		time(&current_time); //get current time
+
+		//우선 기록
+//		time1 = current_time + 600; // after 10 min
+		time1 = current_time + 60; //after 1 min TEST
+		alram = *localtime(&time1);
+		ad->alram_time.hour = alram.tm_hour;
+		ad->alram_time.minute = alram.tm_min;
+
+		if (difftime(current_time, ad->last_success_time) < 3600) {
+			success = *localtime(&ad->last_success_time);
+			ad->alram_time.hour = success.tm_hour + 1; // 1시간 뒤로
+			ad->alram_time.minute = success.tm_min;
+		}
+
+		ad->is_alram_set = true;
+		_D("alram set %2d:%2d:%2d\n", ad->alram_time.hour, ad->alram_time.minute, ad->alram_time.second);
+
+	}
+
+
+	/*if(!ad->is_alram_set) {
+
+		if(today.tm_hour <= 10) {
+
+			ad->alram_time.hour = 11;
+
+		}
+		else if(today.tm_hour >= 18) {
+
+			ad->alram_time.hour = 0;
+
+		} else {
+
+			ad->alram_time.hour = today.tm_hour + 1;
+		}
+
+
+		ad->alram_time.minute = 0;
+		ad->alram_time.second = 0;
+
+		ad->is_alram_set = true;
+	}*/
+
+/*
+	if(!ad->is_alram_set) { //TESTCODE!
+
+		ad->alram_time.hour = today.tm_hour;
+		ad->alram_time.minute = today.tm_min + 1;
+		ad->alram_time.second = 0;
+
+		ad->is_alram_set = true;
+		_D("alram set %2d:%2d:%2d\n", ad->alram_time.hour, ad->alram_time.minute, ad->alram_time.second);
+	}
+*/
+
+}
+
 static Evas_Object *_create_layout(void* data);
 
 void vibrate(int duration, int feedback)
@@ -45,11 +120,6 @@ void vibrate(int duration, int feedback)
 			LOGI("Device vibrates!");
 		}
 	}
-}
-
-static double _get_radian(int num)
-{
-	return num * (PI / 180);
 }
 
 /*
@@ -134,16 +204,6 @@ Evas_Object *view_create_layout_for_part(Evas_Object *parent, char *file_path, c
 	return layout;
 }
 
-void
-app_get_resource(const char *edj_file_in, char *edj_path_out, int edj_path_max)
-{
-	char *res_path = app_get_resource_path();
-	if (res_path) {
-		snprintf(edj_path_out, edj_path_max, "%s%s", res_path, edj_file_in);
-		free(res_path);
-	}
-}
-
 Evas_Object *set_swallow_image_from_path(Evas_Object *layout, char *path, char *part)
 {
 	Evas_Object* img;
@@ -182,79 +242,6 @@ static Evas_Object *_create_layout(void* data)
 	return layout;
 }
 
-#define DATA_FILE_PATH "/opt/usr/media/stretching_data.txt"
-
-static void _launch_stretchme_app(void *data)
-{
-	app_control_h app_control;
-
-	app_control_create(&app_control);
-	app_control_set_operation(app_control, APP_CONTROL_OPERATION_DEFAULT);
-	app_control_set_app_id(app_control, "org.example.stretchme");
-
-	// app parameter : time
-	// TODO: emit the last time instead of the current
-
-	time_t current_time;
-	struct tm* struct_time;
-
-	char timeformat[20];
-	bool is_read = false;
-
-	// get current time
-	time(&current_time);
-	struct_time = localtime(&current_time);
-
-	dlog_print(DLOG_DEBUG, LOG_TAG, "[%d] : %d, %d, %d, %d : %d : %d\n", current_time, struct_time->tm_year+1900, struct_time->tm_mon+1, struct_time->tm_mday, struct_time->tm_hour, struct_time->tm_min, struct_time->tm_sec);
-
-	// get the last success time from file
-	FILE *fp = fopen(DATA_FILE_PATH, "rw+");
-
-	if(fp != NULL)
-	{
-		if(fgets(timeformat, sizeof(timeformat), fp) != NULL)
-		{
-			_D("reading data : %s", timeformat);
-			is_read = true;
-		}
-
-		fclose(fp);
-	}
-	else
-	{
-		_D("file open failed");
-	}
-
-	char timestring[20];
-
-	// emit current time stamp
-	snprintf(timestring, sizeof(timestring), "%d", current_time);
-	app_control_add_extra_data(app_control, "timestamp", timestring);
-
-	// emit the last success time formatted text
-	if(is_read)
-	{
-		app_control_add_extra_data(app_control, "timeformat", timeformat);
-	}
-	else
-	{
-		// emit current time formatted text
-		snprintf(timestring, sizeof(timestring), "%04d-%02d-%02d %02d:%02d:%02d", struct_time->tm_year+1900, struct_time->tm_mon+1, struct_time->tm_mday, struct_time->tm_hour, struct_time->tm_min, struct_time->tm_sec);
-		app_control_add_extra_data(app_control, "timeformat", timestring);
-	}
-
-	if (app_control_send_launch_request(app_control, NULL, NULL) == APP_CONTROL_ERROR_NONE)
-	{
-	   _D("Succeeded to launch a stretchme app.");
-	}
-	else
-	{
-	   _D("Failed to launch a stretchme app.");
-	}
-
-	app_control_destroy(app_control);
-
-}
 
 /*
  * @brief: Obtains the current time from watch_time_h and converts to the current_time_t.
@@ -381,6 +368,7 @@ static bool app_create(int width, int height, void* user_data)
 	ad->h = height;
 
 	view_create(ad);
+	update_alram_time(ad);
 
 	return true;
 }
@@ -389,7 +377,7 @@ static bool app_create(int width, int height, void* user_data)
 static bool
 _app_control_extra_data_cb(app_control_h app_control, const char *key, void *user_data)
 {
-	int ret;
+	/*int ret;
 	char *value;
 
 	ret = app_control_get_extra_data(app_control, key, &value);
@@ -409,7 +397,7 @@ _app_control_extra_data_cb(app_control_h app_control, const char *key, void *use
 		struct tm* tm = localtime (success_time);
 
 		_D("[%s] : %d, %d, %d, %d : %d : %d\n", key, tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
-	}
+	}*/
 
 	return true;
 }
@@ -429,6 +417,7 @@ static void app_pause(void* user_data)
 {
 	// Takes necessary actions when application becomes invisible
 	// Release the resources which need to draw the normal watch
+	_D("app_pause\n");
 }
 
 
@@ -437,6 +426,16 @@ static void app_resume(void* user_data)
 {
 	// Take necessary actions when application becomes visible
 	// Acquire the resources which need to draw the normal watch
+	_D("app_resume\n");
+
+	appdata_s* ad = user_data;
+
+	if(ad->resume_cb) {
+		ad->resume_cb(user_data, NULL, NULL);
+		ad->resume_cb = NULL;
+	}
+
+	update_alram_time(user_data);
 }
 
 static void app_terminate(void* user_data)
@@ -474,11 +473,28 @@ void view_set_display_time(current_time_t current_time, void* data)
 
 static void app_time_tick(watch_time_h watch_time, void* data)
 {
+	appdata_s* ad = data;
 
 	current_time_t current_time = {0,};
 
 	if (_get_time(watch_time, &current_time))
 		view_set_display_time(current_time, data);
+//	_D("tick %2d:%2d:%2d, mode %d\n", current_time.hour, current_time.minute, current_time.second, ad->is_ambient);
+//	_D("alram set %2d:%2d:%2d\n", ad->alram_time.hour, ad->alram_time.minute, ad->alram_time.second);
+
+//	if(current_time.hour >= 10 && current_time.hour <= 18 && ad->is_alram_set) {
+	if( ad->is_alram_set) { // TESTCODE
+		if (ad->alram_time.hour == current_time.hour &&
+			ad->alram_time.minute == current_time.minute ) {
+			if(!ad->is_ambient) {
+				popup_training_cb(data, NULL, NULL);
+			}else{
+				vibrate(300, 99);
+				ad->resume_cb = popup_training_cb;
+			}
+		}
+	}
+
 }
 
 
@@ -505,6 +521,7 @@ void view_toggle_ambient_mode(bool ambient_mode, void* data)
 static void app_ambient_changed(bool ambient_mode, void* data)
 {
 	appdata_s* ad = data;
+	ad->is_ambient = ambient_mode;
 
 	_D("app_ambient_changed bool %d\n", ambient_mode);
 	if(ambient_mode) {

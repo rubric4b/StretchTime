@@ -26,6 +26,7 @@
 #include <Ecore.h>
 
 #define MAX_LENGTH_PATH 1024
+#define MAIN_EDJ "edje/main.edj"
 
 struct _current_time {
 	int hour;
@@ -35,15 +36,28 @@ struct _current_time {
 
 typedef struct _current_time current_time_t;
 
+typedef void      (*Resume_cb)(void *data, Evas_Object *obj, void *event_info);
+
+
 typedef struct appdata{
 	Evas_Object *win;
 	Evas_Object *layout;
 	Evas_Object *bg;
 	Evas_Object *hand_hh;
 	Evas_Object *hand_mm;
+	Evas_Object *popup;
 
 	int w;
 	int h;
+
+	bool is_ambient;
+
+	current_time_t alram_time;
+	time_t last_success_time;
+
+	bool is_alram_set;
+
+	Resume_cb resume_cb;
 
 
 } appdata_s;
@@ -69,7 +83,8 @@ static inline char *get_resource_path(const char *file_path)
 	return absolute_path;
 }
 
-void app_get_resource(const char *edj_file_in, char *edj_path_out, int edj_path_max);
 void vibrate(int duration, int feedback);
+void update_alram_time(void* data);
+
 
 #endif /* __main_H__ */
