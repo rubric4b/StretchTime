@@ -2,11 +2,18 @@
 // Created by hobbang5 on 2016-04-25.
 //
 
+#include <Elementary.h>
+#include <efl_extension.h>
+
+#include "stretch_time.h"
+#include "sm_type.h"
+#include "sm_signal.h"
+
 #include "sm_popup.h"
 #include "log.h"
 
-#define DATA_FILE_PATH "/opt/usr/media/stretching_data.txt"
 
+/*
 static void _launch_stretchme_app(void *data)
 {
     app_control_h app_control;
@@ -30,6 +37,7 @@ static void _launch_stretchme_app(void *data)
 
     dlog_print(DLOG_DEBUG, LOG_TAG, "[%d] : %d, %d, %d, %d : %d : %d\n", current_time, struct_time->tm_year+1900, struct_time->tm_mon+1, struct_time->tm_mday, struct_time->tm_hour, struct_time->tm_min, struct_time->tm_sec);
 
+*/
 /*    // get the last success time from file
     FILE *fp = fopen(DATA_FILE_PATH, "rw+");
 
@@ -64,7 +72,8 @@ static void _launch_stretchme_app(void *data)
         // emit current time formatted text
         snprintf(timestring, sizeof(timestring), "%04d-%02d-%02d %02d:%02d:%02d", struct_time->tm_year+1900, struct_time->tm_mon+1, struct_time->tm_mday, struct_time->tm_hour, struct_time->tm_min, struct_time->tm_sec);
         app_control_add_extra_data(app_control, "timeformat", timestring);
-    }*/
+    }*//*
+
 
     if (app_control_send_launch_request(app_control, NULL, NULL) == APP_CONTROL_ERROR_NONE)
     {
@@ -78,6 +87,7 @@ static void _launch_stretchme_app(void *data)
     app_control_destroy(app_control);
 
 }
+*/
 
 static void
 popup_yes_cb(void *data, Evas_Object *obj, void *event_info)
@@ -90,7 +100,8 @@ popup_yes_cb(void *data, Evas_Object *obj, void *event_info)
 
     elm_popup_dismiss(ad->popup);
 
-    _launch_stretchme_app(data);
+    signal_app_launch_request(STRETCHME_APP_ID);
+//    _launch_stretchme_app(data);
 
 }
 

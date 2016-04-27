@@ -29,8 +29,6 @@
 #define IMAGE_FPATH_APP_PRESS   "../res/images/watch/app_icon_pressed.png"
 #define IMAGE_FPATH_BADGE		"../res/images/watch/badge.png"
 
-
-
 styles
 {
 	style
@@ -43,6 +41,7 @@ styles
 collections {
 
    images {
+      image: IMAGE_FPATH_CIPHER_BOARD COMP;
       image: IMAGE_FPATH_HANDS_CENTER COMP;
       image: IMAGE_FPATH_HAND_SECOND COMP;
       image: IMAGE_FPATH_BLACK COMP;
@@ -52,9 +51,11 @@ collections {
       image: IMAGE_FPATH_BADGE COMP;
    }
 
+
    group {
       name: "main";
       parts {
+/*
          part {
             name: PART_BACKGROUND;
             type: SWALLOW;
@@ -70,8 +71,8 @@ collections {
                }
             }
          }
+*/
 
-/*
          part {
             name: PART_BACKGROUND;
             type: IMAGE;
@@ -89,18 +90,8 @@ collections {
                   relative: 1.0 1.0;
                }
             }
-            description {
-               */
-/* Dummy state - otherwise edje_cc discards bubble-blue.png
-              as it thinks it's unused *//*
-
-               state: "foo" 0.0;
-               image {
-                  normal: IMAGE_FPATH_BLACK;
-               }
-            }
          }
-*/
+
             part {
                 name: PART_ICON_CENTER;
                 type: RECT;
@@ -191,11 +182,11 @@ collections {
                     state: "default" 0.0;
                     rel1 {
                         relative: 0.0 0.0;
-                        to: PART_ICON_CENTER;
+                        to: PART_BACKGROUND;
                     }
                     rel2 {
                         relative: 1.0 1.0;
-                        to: PART_ICON_CENTER;
+                        to: PART_BACKGROUND;
                     }
                 }
             }

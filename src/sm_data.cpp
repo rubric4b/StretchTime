@@ -1,10 +1,9 @@
 #include <fstream>
 
-#include "sm_data.h"
+#include "sm_type.h"
 #include "log.h"
 
-#define DATA_FILE_PATH "/opt/usr/media/stretching_data.txt"
-#define DATA_LINE_LENGTH 22
+#include "sm_data.h"
 
 static char* util_strtok(char* str, const char* delim, char** nextp)
 {

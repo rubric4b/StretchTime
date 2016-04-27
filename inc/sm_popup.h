@@ -5,7 +5,7 @@
 #ifndef STRETCHTIME_SM_POPUP_H
 #define STRETCHTIME_SM_POPUP_H
 
-#include "stretch_time.h"
+#include <Evas.h>
 
 void popup_training_cb(void *data, Evas_Object *obj, void *event_info);
 

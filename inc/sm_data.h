@@ -7,19 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-#ifndef bool
-#define bool int
-#endif
-
-#ifndef true
-#define true 1
-#endif
-
-#ifndef false
-#define false 0
-#endif
-
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,8 +19,6 @@ typedef enum
 	ST_SUCCESS,
 	ST_FAIL
 }LOG_TYPE;
-
-
 
 /**
  * get the last stretching time from stored file
