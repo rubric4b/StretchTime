@@ -17,7 +17,10 @@ typedef enum
 {
 	ST_TRIAL = 0,
 	ST_SUCCESS,
-	ST_FAIL
+	ST_FAIL,
+	ST_POPUP,
+	ST_POPUP_YES,
+	ST_POPUP_NO
 }LOG_TYPE;
 
 /**
