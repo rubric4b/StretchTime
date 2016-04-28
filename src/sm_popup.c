@@ -8,6 +8,7 @@
 #include "stretch_time.h"
 #include "sm_type.h"
 #include "sm_signal.h"
+#include "sm_data.h"
 
 #include "sm_popup.h"
 #include "log.h"
@@ -95,6 +96,8 @@ popup_yes_cb(void *data, Evas_Object *obj, void *event_info)
     appdata_s *ad = (appdata_s *) data;
 
     if(!data) return;
+    store_last_time_with_current(ST_POPUP_YES);
+
 
     ad->is_alram_set = false; // stretchme app lunched
 
@@ -113,6 +116,8 @@ popup_hide_cb(void *data, Evas_Object *obj, void *event_info)
     struct tm alram;
 
     if(!data) return;
+
+    store_last_time_with_current(ST_POPUP_NO);
 
 //    ad->is_alram_set = false;
     time(&current_time); //get current time
@@ -190,5 +195,7 @@ void popup_training_cb(void *data, Evas_Object *obj, void *event_info)
     evas_object_show(icon);
 
     evas_object_show(ad->popup);
+
+    store_last_time_with_current(ST_POPUP);
 }
 
