@@ -76,8 +76,8 @@ void update_alram_time(void* data) {
 	}
 
 
-	int count = div((int)difftime(current_time, ad->last_success_time), 60 * 60).quot;
-//	count = 11; //TESTCODE!
+	int count = (is_read) ? div((int)difftime(current_time, ad->last_success_time), 60 * 60).quot : 0;
+//	count = 5; //TESTCODE!
 	if(!ad->is_ambient) {
 		view_set_bagde_missed_calls(count, data);
 	}
