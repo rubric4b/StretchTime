@@ -25,6 +25,7 @@
 #define IMAGE_FPATH_APP_UNPRESS "../res/images/watch/app_icon_unpress.png"
 #define IMAGE_FPATH_APP_PRESS   "../res/images/watch/app_icon_pressed.png"
 #define IMAGE_FPATH_BADGE		"../res/images/watch/badge.png"
+//#define IMAGE_FPATH_BADGE_RED	"../res/images/watch/badge_red.png"
 
 styles
 {
@@ -43,6 +44,7 @@ collections {
       image: IMAGE_FPATH_APP_UNPRESS COMP;
       image: IMAGE_FPATH_APP_PRESS COMP;
       image: IMAGE_FPATH_BADGE COMP;
+      //image: IMAGE_FPATH_BADGE_RED COMP;
    }
 
    group {
@@ -168,6 +170,15 @@ collections {
                   to: PART_ICON_CENTER;
                }
             }
+            /*
+            description { //dummy
+            	state: "red" 0.0;
+            	image {
+            		normal: IMAGE_FPATH_BADGE_RED;
+            	}
+
+            }
+            */
          }
 
 			part {
@@ -419,12 +430,16 @@ collections {
                set_state_val(badge_counter_part, STATE_VISIBLE, 0);
             }
             else {
+               //set_state_val(badge_part, STATE_IMAGE, IMAGE:IMAGE_FPATH_BADGE);
                set_state_val(badge_part, STATE_VISIBLE, 1);
                set_state_val(badge_counter_part, STATE_VISIBLE, 1);
+
                if (badge_count <= 10)
-               snprintf(text_buff, sizeof(text_buff), "%dh", badge_count);
+               		snprintf(text_buff, sizeof(text_buff), "%dh", badge_count);
                else
-               text_buff = "2h";
+               		text_buff = "!";
+
+               //set_state_val(badge_part, STATE_IMAGE, IMAGE:IMAGE_FPATH_BADGE_RED);
                set_state_val(badge_counter_part, STATE_TEXT, text_buff);
             }
             set_state(badge_part, "custom", 0.0);
