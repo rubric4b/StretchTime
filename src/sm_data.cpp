@@ -47,12 +47,14 @@ bool store_last_time(time_t timestamp, LOG_TYPE type)
 
 	if (out_file.is_open() && out_file.good())
 	{
-		char buf[25];
+		char buf[DATA_LINE_LENGTH+1];
 
 		struct tm* struct_time;
 		struct_time = localtime(&timestamp);
 
-		snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d,%d\n", struct_time->tm_year + 1900, struct_time->tm_mon + 1, struct_time->tm_mday, struct_time->tm_hour, struct_time->tm_min, struct_time->tm_sec, type);
+		snprintf(buf, sizeof(buf), "%d,%04d-%02d-%02d %02d:%02d:%02d,%d,%d,%d,%s\n",
+				 get_experiment_type() + 1, struct_time->tm_year + 1900, struct_time->tm_mon + 1, struct_time->tm_mday, struct_time->tm_hour, struct_time->tm_min, struct_time->tm_sec,
+				 type, 0, 0, "12345.12345678");
 		out_file << buf;
 
 //		std::cout << "write : " << buf;
@@ -64,6 +66,7 @@ bool store_last_time(time_t timestamp, LOG_TYPE type)
         _E("%s file open failed\n", DATA_FILE_PATH);
 		return false;
 	}
+
 
 	return true;
 }
@@ -276,3 +279,49 @@ int get_awareness_level_from_data(double diff)
 }
 
 
+Experiment_Type get_experiment_type()
+{
+	static Experiment_Type ext = EXPERIMENT_MAX;
+
+	if(ext == EXPERIMENT_MAX)
+	{
+		std::ifstream ex_file;
+
+		// file open
+		ex_file.open(EXPERIMENT_TYPE1_FILE_PATH, std::ios::in | std::ios::binary);
+
+		if (ex_file.is_open() && ex_file.good())
+		{
+			ext = EXPERIMENT_1;
+			ex_file.close();
+		}
+		else
+		{
+			// file open
+			ex_file.open(EXPERIMENT_TYPE2_FILE_PATH, std::ios::in | std::ios::binary);
+
+			if (ex_file.is_open() && ex_file.good())
+			{
+				ext = EXPERIMENT_2;
+				ex_file.close();
+			}
+			else
+			{
+#if 0
+				// file open
+				ex_file.open(EXPERIMENT_TYPE3_FILE_PATH, std::ios::in | std::ios::binary);
+
+				if (ex_file.is_open() && ex_file.good())
+				{
+					ext = EXPERIMENT_3;
+					ex_file.close();
+				}
+#else
+				ext = EXPERIMENT_3; // in default
+#endif
+			}
+		}
+	}
+
+	return ext;
+}

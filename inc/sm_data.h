@@ -78,6 +78,15 @@ bool store_last_time_with_current(LOG_TYPE type);
 int get_counts_in_today(LOG_TYPE type);
 
 
+/**
+ * get experiment type
+ * This function checks the experiment type via file config ONCE.
+ *
+ * @return Experiment_Type
+ */
+Experiment_Type get_experiment_type();
+
+
 #ifdef __cplusplus
 }
 #endif
