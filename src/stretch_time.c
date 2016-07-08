@@ -312,7 +312,7 @@ static void app_time_tick(watch_time_h watch_time, void* data)
 		update_alram_time(data);
 	}
 
-	if(current_time.hour >= 10 && current_time.hour < 22 && ad->is_alram_set) {
+	if(current_time.hour >= 10 && current_time.hour < 20 && ad->is_alram_set) {
 //	if( ad->is_alram_set) { // TESTCODE
 
 		if(ad->popup && current_time.second == 0)

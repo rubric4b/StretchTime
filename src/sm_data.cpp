@@ -117,7 +117,7 @@ bool get_stored_last_time(time_t* timestamp, LOG_TYPE type)
 			char* pline = strdup(line.c_str()); // make char* from const char*
 
 			// parsing time string
-			word1 = util_strtok(pline, ",", &wordPtr); // time
+			word1 = util_strtok(pline+2, ",", &wordPtr); // time
 			// parsing type string
 			word2 = util_strtok(NULL, ",", &wordPtr); // type
 			int st_type = atoi(word2);
@@ -185,7 +185,7 @@ int get_counts_in_today(LOG_TYPE type)
 			char* pline = strdup(line.c_str()); // make char* from const char*
 
 			// parsing time string
-			word1 = util_strtok(pline, ",", &wordPtr); // time
+			word1 = util_strtok(pline+2, ",", &wordPtr); // time
 			// parsing type string
 			word2 = util_strtok(NULL, ",", &wordPtr); // type
 			int st_type = atoi(word2);
